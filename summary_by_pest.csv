@@ -1,0 +1,12 @@
+PEST NAME,records,stations,pct_weeks_present,median_value,max_value,outliers
+Brownplanthopper,1958,5,59.9,79.5,123391.0,93
+Caseworm,936,4,51.2,1.0,649.0,30
+Gallmidge,3016,5,38.2,0.0,163162.0,103
+Greenleafhopper,2287,5,64.0,32.0,311169.0,134
+LeafBlast,2081,2,20.6,0.0,87.2,0
+LeafFolder,1716,5,63.6,4.0,1520.0,68
+Miridbug,1144,4,76.6,40.0,82360.0,81
+NeckBlast,208,2,11.5,0.0,29.12,0
+Whitebackedplanthopper,1248,3,63.3,11.0,266642.0,87
+Yellowstemborer,4325,5,64.8,11.0,51542.0,252
+ZigZagleafhopper,468,1,96.8,323.0,34685.0,24
