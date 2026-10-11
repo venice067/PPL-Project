@@ -1,5 +1,7 @@
 import numpy as np
 import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 WEATHER_COLS = ["MaxT", "MinT", "RH1(%)", "RH2(%)", "RF(mm)", "WS(kmph)", "SSH(hrs)", "EVP(mm)"]
 STATION_WEEK = ["Location", "Observation Year", "Standard Week"]
@@ -160,6 +162,83 @@ def final_check(df):
         assert df[col].between(low, high).all(), col + " has impossible values"
     print("\nFinal check passed.")
 
+def make_charts(df, by_pest, by_season):
+    sns.set_theme(style="whitegrid")
+
+    def finish(title, xlabel, ylabel, filename):
+        plt.title(title, fontsize=13, fontweight="bold")
+        plt.xlabel(xlabel)
+        plt.ylabel(ylabel)
+        plt.tight_layout()
+        plt.savefig(filename, dpi=150)
+        plt.show()
+
+    top10 = by_pest.sort_values("pct_weeks_present", ascending=False).head(10)
+
+    # ---------- PART A: Outbreak analysis ----------
+
+    # Chart 1: Which pests show up most often?
+    plt.figure(figsize=(9, 6))
+    sns.barplot(data=top10.reset_index(), x="pct_weeks_present", y="PEST NAME", color="seagreen")
+    finish("Top 10 Pests by Share of Weeks Present", "% of weeks pest was present",
+           "Pest", "chart1_top_pests.png")
+
+    # Chart 2: Kharif vs Rabi/Summer for those pests
+    plt.figure(figsize=(7, 6))
+    sns.heatmap(by_season.loc[top10.index], annot=True, fmt=".1f", cmap="YlGn")
+    finish("Pest Presence by Season (%)", "Season", "Pest", "chart2_season_heatmap.png")
+
+    # Chart 3: Which months have the most pest activity?
+    monthly = df.groupby("Month")["Pest_Present"].mean() * 100
+    plt.figure(figsize=(9, 5))
+    sns.lineplot(x=monthly.index, y=monthly.values, marker="o", color="darkorange")
+    plt.xticks(range(1, 13))
+    finish("Pest Presence Across the Year", "Month", "% of observations with pest present",
+           "chart3_monthly.png")
+
+    # Chart 4: Which pests have the most flagged outbreaks?
+    outbreaks = by_pest.sort_values("outliers", ascending=False).head(10)
+    plt.figure(figsize=(9, 6))
+    sns.barplot(data=outbreaks.reset_index(), x="outliers", y="PEST NAME", color="firebrick")
+    finish("Pests with the Most Outbreak Records", "Number of outbreak observations",
+           "Pest", "chart4_outbreaks.png")
+
+    # ---------- PART B: Environmental factors ----------
+
+    # Charts 5-7: Pest presence across humidity, temperature and rainfall bands
+    bands = [
+        ("RH_Mean", [0, 60, 70, 80, 90, 100], "Mean relative humidity (%)", "chart5_humidity.png"),
+        ("Mean_Temp", [0, 20, 25, 30, 35, 50], "Mean temperature (°C)", "chart6_temp.png"),
+        ("RF(mm)", [-1, 0, 10, 50, 600], "Weekly rainfall (mm)", "chart7_rain.png"),
+    ]
+    for col, bins, label, filename in bands:
+        band = pd.cut(df[col], bins=bins)
+        rate = df.groupby(band, observed=True)["Pest_Present"].mean() * 100
+        plt.figure(figsize=(8, 5))
+        sns.barplot(x=rate.index.astype(str), y=rate.values, color="teal")
+        finish("Pest Presence by " + label, label,
+               "% of observations with pest present", filename)
+
+    # Chart 8: Correlation of weather (and last week's values) with pest level
+    cols = ["Mean_Temp", "RH_Mean", "RF(mm)", "WS(kmph)", "SSH(hrs)", "EVP(mm)",
+            "Pest_Value_log", "MaxT_lastweek", "RH1(%)_lastweek", "RF(mm)_lastweek",
+            "Pest_Value_log_lastweek"]
+    plt.figure(figsize=(10, 8))
+    sns.heatmap(df[cols].corr(), annot=True, fmt=".2f", cmap="coolwarm", center=0)
+    finish("Correlation Between Weather and Pest Values", "", "", "chart8_correlation.png")
+
+    # ---------- PART C: Forecasting ----------
+
+    # Chart 9: Does last week's pest level predict this week's?
+    lag = df.dropna(subset=["Pest_Value_log", "Pest_Value_log_lastweek"])
+    lag = lag.sample(min(5000, len(lag)), random_state=1)
+    plt.figure(figsize=(7, 6))
+    sns.regplot(data=lag, x="Pest_Value_log_lastweek", y="Pest_Value_log",
+                scatter_kws={"alpha": 0.25, "s": 12}, line_kws={"color": "red"})
+    finish("Last Week's vs This Week's Pest Level (log scale)",
+           "Last week: log(1 + Pest Value)", "This week: log(1 + Pest Value)",
+           "chart9_forecast.png")
+
 
 def main():
     df = load_data("RICE.csv")
@@ -179,6 +258,8 @@ def main():
     by_pest, by_season = make_summaries(df)
     print("\nSummary by pest:\n", by_pest)
     print("\n% of weeks pest is present, by season:\n", by_season)
+
+    make_charts(df, by_pest, by_season)
 
     df.to_csv("cleaned_rice_final.csv", index=False)
     by_pest.to_csv("summary_by_pest.csv")
