@@ -68,7 +68,7 @@ Pest outbreaks can cause serious yield losses in rice. This project analyses wee
 - pandas, numpy, matplotlib, seaborn
 
 ```bash
-pip install pandas numpy matplotlib seaborn
+pip install -r requirements.txt
 ```
 
 ### Steps
@@ -82,8 +82,12 @@ pip install pandas numpy matplotlib seaborn
    ```bash
    python pyproj.py
    ```
+   To also display charts interactively in pop-up windows, run:
+   ```bash
+   python pyproj.py --show
+   ```
 
-The script prints the cleaning steps, then opens each chart in turn (close a window to see the next). It also saves the cleaned CSV, both summary CSVs and all chart images in the project folder.
+The script prints the cleaning steps, saves the cleaned CSV, both summary CSVs, and exports all 9 chart images into the project folder.
 
 ## Acknowledgements
 

@@ -1,7 +1,11 @@
+import sys
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
+
+BASE_DIR = Path(__file__).resolve().parent
 
 WEATHER_COLS = ["MaxT", "MinT", "RH1(%)", "RH2(%)", "RF(mm)", "WS(kmph)", "SSH(hrs)", "EVP(mm)"]
 STATION_WEEK = ["Location", "Observation Year", "Standard Week"]
@@ -162,7 +166,7 @@ def final_check(df):
         assert df[col].between(low, high).all(), col + " has impossible values"
     print("\nFinal check passed.")
 
-def make_charts(df, by_pest, by_season):
+def make_charts(df, by_pest, by_season, show=False):
     sns.set_theme(style="whitegrid")
 
     def finish(title, xlabel, ylabel, filename):
@@ -170,8 +174,10 @@ def make_charts(df, by_pest, by_season):
         plt.xlabel(xlabel)
         plt.ylabel(ylabel)
         plt.tight_layout()
-        plt.savefig(filename, dpi=150)
-        plt.show()
+        plt.savefig(BASE_DIR / filename, dpi=150)
+        if show:
+            plt.show()
+        plt.close()
 
     top10 = by_pest.sort_values("pct_weeks_present", ascending=False).head(10)
 
@@ -225,6 +231,7 @@ def make_charts(df, by_pest, by_season):
             "Pest_Value_log_lastweek"]
     plt.figure(figsize=(10, 8))
     sns.heatmap(df[cols].corr(), annot=True, fmt=".2f", cmap="coolwarm", center=0)
+    plt.xticks(rotation=45, ha="right")
     finish("Correlation Between Weather and Pest Values", "", "", "chart8_correlation.png")
 
     # ---------- PART C: Forecasting ----------
@@ -241,7 +248,9 @@ def make_charts(df, by_pest, by_season):
 
 
 def main():
-    df = load_data("RICE.csv")
+    show_charts = "--show" in sys.argv
+    data_path = BASE_DIR / "RICE.csv"
+    df = load_data(data_path)
     check_data(df)
 
     print("\n--- Cleaning ---")
@@ -259,14 +268,17 @@ def main():
     print("\nSummary by pest:\n", by_pest)
     print("\n% of weeks pest is present, by season:\n", by_season)
 
-    make_charts(df, by_pest, by_season)
-
-    df.to_csv("cleaned_rice_final.csv", index=False)
-    by_pest.to_csv("summary_by_pest.csv")
-    by_season.to_csv("summary_by_season.csv")
+    df.to_csv(BASE_DIR / "cleaned_rice_final.csv", index=False)
+    by_pest.to_csv(BASE_DIR / "summary_by_pest.csv")
+    by_season.to_csv(BASE_DIR / "summary_by_season.csv")
     print("\nSaved cleaned_rice_final.csv, summary_by_pest.csv, summary_by_season.csv")
     print("Final shape:", df.shape)
     print(df.iloc[:5, :8])
 
+    print("\n--- Generating charts ---")
+    make_charts(df, by_pest, by_season, show=show_charts)
+    print("All 9 charts saved successfully.")
 
-main()
+
+if __name__ == "__main__":
+    main()
